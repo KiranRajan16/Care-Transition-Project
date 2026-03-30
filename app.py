@@ -4,32 +4,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Styling
-st.markdown("""
-<style>
-body {
-    font-family: 'Segoe UI', sans-serif;
-}
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-/* Title */
-.title {
-    color: #C084FC;
-    font-size: 36px;
-    font-weight: bold;
-}
-
-/* Subheaders */
-h2, h3 {
-    color: #A78BFA;
-    font-family: 'Segoe UI', sans-serif;
-}
-
-/* General text */
-p {
-    font-size: 14px;
-    color: #CCCCCC;
-}
-</style>
-""", unsafe_allow_html=True)
+load_css("styles.css")
 
 # Data loading
 df = pd.read_csv("data/HHS_data.csv")
@@ -56,28 +35,7 @@ df['Backlog'] = df['CBP_Custody'] - df['Discharged']
 df['Stability'] = df['Discharge_Effectiveness'].rolling(7).std()
 
 # Title
-st.markdown(
-    '<p style="color:#C084FC; font-size:50px; font-weight:bold;">Care Transition Analytics Dashboard</p>',
-    unsafe_allow_html=True
-)
-st.markdown("""
-<style>
-
-/* Sidebar background */
-section[data-testid="stSidebar"] {
-    background-color: #1E1E1E;
-}
-
-/* Sidebar header text */
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
-    color: #FA1606;  /* 👈 Light purple */
-    font-family: 'Segoe UI', sans-serif;
-}
-
-</style>
-""", unsafe_allow_html=True)
+st.markdown('<p class="title">Care Transition Efficiency & Placement Outcome Analytics</p>', unsafe_allow_html=True)
 
 # Filters
 st.sidebar.header("⚙️ User Capabilities")
@@ -106,35 +64,29 @@ st.subheader("📊 Key Performance Indicators")
 
 col1, col2, col3, col4 = st.columns(4)
 
-def kpi_card(title, value, color):
+def kpi_card(title, value, color_class):
     return f"""
-    <div style="
-        background-color:#1E1E1E;
-        padding:20px;
-        border-radius:12px;
-        border-left:6px solid {color};
-        font-family:'Segoe UI', sans-serif;
-    ">
-        <p style="color:#BBBBBB; font-size:14px;">{title}</p>
-        <h2 style="color:white; font-size:28px;">{value}</h2>
+    <div class="kpi-card {color_class}">
+        <p class="kpi-title">{title}</p>
+        <h2 class="kpi-value">{value}</h2>
     </div>
     """
 
 col1.markdown(kpi_card("🚀 Transfer Efficiency",
                        round(filtered_df['Transfer_Efficiency'].mean(),2),
-                       "#4CAF50"), unsafe_allow_html=True)
+                       "kpi-green"), unsafe_allow_html=True)
 
 col2.markdown(kpi_card("📦 Discharge Effectiveness",
                        round(filtered_df['Discharge_Effectiveness'].mean(),2),
-                       "#2196F3"), unsafe_allow_html=True)
+                       "kpi-blue"), unsafe_allow_html=True)
 
 col3.markdown(kpi_card("⚡ Throughput",
                        round(filtered_df['Throughput'].mean(),2),
-                       "#FF9800"), unsafe_allow_html=True)
+                       "kpi-orange"), unsafe_allow_html=True)
 
 col4.markdown(kpi_card("📊 Max Backlog",
                        int(filtered_df['Backlog'].max()),
-                       "#D31608"), unsafe_allow_html=True)
+                       "kpi-red"), unsafe_allow_html=True)
 
 # Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
@@ -143,45 +95,91 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Bottlenecks",
     "Trends"
 ])
+def plot_chart(data, x, y, title, ylabel):
+    fig, ax = plt.subplots(figsize=(14,6))
+    sns.lineplot(x=data[x], y=data[y], ax=ax)
 
+    ax.set_title(title, color="#A78BFA", fontsize=16)
+    ax.set_xlabel(x, fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+
+    plt.tight_layout()
+    st.pyplot(fig, use_container_width=True)
+
+def plot_with_alert(data, x, y, title, ylabel, threshold, metric_option):
+    fig, ax = plt.subplots(figsize=(14,6))
+
+    # Main line
+    sns.lineplot(x=data[x], y=data[y], ax=ax)
+
+    # Alert points (based on selected metric)
+    alert_points = data[data[metric_option] < threshold]
+    ax.scatter(alert_points[x], alert_points[y],
+               color='red', s=50, label='Alert')
+
+    # Threshold line (for visual reference)
+    ax.axhline(y=threshold, color='red', linestyle='--', label='Threshold')
+
+    ax.set_title(title, color="#A78BFA", fontsize=16)
+    ax.set_xlabel(x, fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+
+    ax.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    st.pyplot(fig, use_container_width=True)   
+    
 # Pipeline
 with tab1:
-    fig, ax = plt.subplots(figsize=(14,6))
-    sns.lineplot(data=filtered_df[['CBP_Custody','HHS_Custody','Discharged']], ax=ax)
+    st.subheader("Care Pipeline Flow")
 
-    ax.set_title("Pipeline Movement", color="#A78BFA")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Number of Children")
+    plot_chart(filtered_df, 'Date', 'CBP_Custody',
+               "CBP Custody Trend", "Number of Children")
 
-    st.pyplot(fig, use_container_width=True)
+    plot_chart(filtered_df, 'Date', 'HHS_Custody',
+               "HHS Custody Trend", "Number of Children")
+
+    plot_chart(filtered_df, 'Date', 'Discharged',
+               "Discharged Trend", "Number of Children")
 
 # Efficiency
 with tab2:
-    fig, ax = plt.subplots(figsize=(14,6))
-    sns.lineplot(x=filtered_df['Date'], y=filtered_df[metric_option], ax=ax)
-
-    ax.set_title(f"{metric_option} Trend", color="#A78BFA")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Value")
-
-    st.pyplot(fig, use_container_width=True)
+   st.subheader("Efficiency Analysis")
+   plot_chart(filtered_df, 'Date', metric_option,
+               f"{metric_option} Trend", "Value")
 
 # Bottlenecks
 with tab3:
-    fig, ax = plt.subplots(figsize=(14,6))
-    sns.lineplot(x=filtered_df['Date'], y=filtered_df['Backlog'], ax=ax)
+    st.subheader("Bottleneck Analysis")
 
-    ax.set_title("Backlog Trend", color="#A78BFA")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Backlog")
+    # Bottleneck
+    plot_chart(
+        filtered_df,
+        x='Date',
+        y='Backlog',
+        title="Backlog Trend (Bottleneck)",
+        ylabel="Backlog"
+    )
 
-    st.pyplot(fig, use_container_width=True)
+    st.markdown("---")
 
-    # Alert Logic
+    # Alerts plot 
+    plot_with_alert(
+        filtered_df,
+        x='Date',
+        y=metric_option,
+        title=f"{metric_option} Alert Monitoring",
+        ylabel=metric_option,
+        threshold=threshold,
+        metric_option=metric_option
+    )
+
+    # ✅ Alert Logic
     alerts = filtered_df[filtered_df[metric_option] < threshold]
 
     if not alerts.empty:
-        st.error("⚠️ Alert: Threshold Breach Detected")
+        st.error(f"⚠️ {len(alerts)} Alert Points Detected")
         st.write(alerts[['Date', metric_option]])
     else:
         st.success("✅ No Issues Detected")
@@ -196,21 +194,6 @@ with tab4:
     ax.set_ylabel("Variation")
 
     st.pyplot(fig, use_container_width=True)
-
-# Highlight alert points in red
-alert_points = filtered_df[filtered_df[metric_option] < threshold]
-
-fig, ax = plt.subplots(figsize=(14,6))
-sns.lineplot(x=filtered_df['Date'], y=filtered_df[metric_option], ax=ax)
-
-# highlight points
-ax.scatter(alert_points['Date'], alert_points[metric_option], color='red', label='Alert')
-
-ax.axhline(y=threshold, color='red', linestyle='--', label='Threshold')
-
-ax.legend()
-
-st.pyplot(fig)
 
 # Summary
 st.subheader("📌 Insights Summary")

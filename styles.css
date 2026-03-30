@@ -1,0 +1,54 @@
+/* -------- GLOBAL -------- */
+body {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* -------- TITLE -------- */
+.title {
+    color: #C084FC !important;
+    font-size: 48px !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+}
+
+/* -------- SUBHEADERS -------- */
+h2, h3 {
+    color: #A78BFA;
+}
+
+/* -------- KPI CARDS -------- */
+.kpi-card {
+    background-color: #1E1E1E;
+    padding: 20px;
+    border-radius: 12px;
+    font-family: 'Segoe UI', sans-serif;
+    box-shadow: 0px 2px 10px rgba(0,0,0,0.3);
+    transition: 0.3s;
+}
+
+.kpi-card:hover {
+    transform: scale(1.02);
+}
+
+.kpi-title {
+    color: #BBBBBB;
+    font-size: 14px;
+}
+
+.kpi-value {
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* Different colors */
+.kpi-green { border-left: 6px solid #4CAF50; }
+.kpi-blue { border-left: 6px solid #2196F3; }
+.kpi-orange { border-left: 6px solid #FF9800; }
+.kpi-red { border-left: 6px solid #F44336; }
+
+/* -------- SIDEBAR -------- */
+section[data-testid="stSidebar"] {
+    background-color: #1E1E1E;
+    color: #f00505;
+}
